@@ -72,12 +72,14 @@ class FidelisEndpoint(object):
     def __genericPOST__(self, api, **kwargs):
         url = self.baseURL + api
         params = sanitize_params(kwargs)
-        return self._session.post(url=url, headers=self._headers, json=params)
+        return self._session.post(url=url, headers=self._headers, 
+            json=params, verify=self._ignoressl)
             
     def __genericGET__(self, api, **kwargs):
         url = self.baseURL + api
         params = sanitize_params(kwargs)
-        return self._session.get(url=url, headers=self._headers, json=params)
+        return self._session.get(url=url, headers=self._headers, 
+            json=params, verify=self._ignoressl)
 
     def get_alert_rules(self, limit, offset, sort, search):
         """
@@ -92,8 +94,12 @@ class FidelisEndpoint(object):
             Defaults to `CreatedDate`.
             search {dict} -- A filter applied on results of the get operation.
             See Search Parameter Examples in the Fidelis API Documentation.
+
+        Returns:
+            list -- List of dicts containing alert rules metadata
         """
-        return self.__genericGET__(api='alertrules', **locals())
+        resp = self.__genericGET__(api='alertrules', **locals())
+        return resp.json()['alertRuleInfos']
 
     def create_alert_rule(self, name, rulesJSON, alertSeverity, 
                           maxHitsAllowed, doNotAlert):
@@ -141,14 +147,59 @@ class FidelisEndpoint(object):
             endDate {datetime.datetime} -- The end of the time range of 
             returned values.
 
+        Returns:
+            list -- List of dicts containing alerts metadata
+
             Note: `startDate` and `endDate` times apply to the server and are
             converted to UTC format in the query.
         """
         startDate = convert_to_iso8601(startDate)
         endDate = convert_to_iso8601(endDate)
-        return self.__genericGET__(api='alerts/getalerts', **locals())
+        resp = self.__genericGET__(api='alerts/getalerts', **locals())
+        return resp.json()['entities']
 
+    def get_endpoints(self, startIndex, count, sort):
+        """
+        Get endpoints
+        
+        Arguments:
+            startIndex {int} -- Index of the starting row returned. Defaults to `0`.
+            count {int} -- The number of endpoints returned.
+            sort {str} -- Sorts the result before applying limit and offset.
+        
+        Returns:
+            list -- List of dicts containing endpoint metadata
+        """
+        api = "v2/endpoints/{}/{}/{}".format(startIndex, count, sort)
+        resp = self.__genericGET__(api=api)
+        return resp.json()['endpoints']
     
+    def get_endpoint_ids_by_name(self, endpointNames):
+        """
+        Get a list of endpoint IDs by their endpoint names
+        
+        Arguments:
+            endpointNames {list} -- List of endpoint names.
+        
+        Returns:
+            list -- List of endpoint IDs
+        """
+        url = self.baseURL + 'endpoints/endpointidsbyname'
+        resp = self._session.post(url=url, headers=self._headers, 
+            json=endpointNames, verify=self._ignoressl)
+        return resp.json()
+
+    def delete_endpoint(self, endpointId):
+        """
+        Delete an endpoint.
+        
+        Arguments:
+            endpointId {str} -- Endpoint ID string.
+        """
+        raise NotImplementedError(
+            "`delete_endpoint` method not yet implemented.")
+
+
 def sanitize_params(params):
     return {k:v for k,v in params.items() if v is not None}
 
