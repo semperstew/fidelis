@@ -11,3 +11,5 @@ class ExpiredTokenException(TokenException):
 class InvalidTokenException(TokenException):
     """Authentication token is invalid"""
 
+class NotAuthorizedException(RequestException):
+    """Access Forbidden"""
